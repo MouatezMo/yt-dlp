@@ -22,12 +22,27 @@ from ..utils.networking import HTTPHeaderDict
 
 class HttpFD(FileDownloader):
     def real_download(self, filename, info_dict):
-        url = info_dict['url']
-        request_data = info_dict.get('request_data', None)
-        request_extensions = {}
-        impersonate_target = self._get_impersonate_target(info_dict)
-        if impersonate_target is not None:
-            request_extensions['impersonate'] = impersonate_target
+    url = info_dict['url']
+    request_data = info_dict.get('request_data', None)
+    request_extensions = {}
+    impersonate_target = self._get_impersonate_target(info_dict)
+    
+    # --- تبدأ التعديلات المخصصة لترجمات يوتيوب ---
+    if 'youtube.com/api/timedtext' in url:
+        # إذا لم يكن هناك انتحال شخصية، أجبره على استخدام كروم
+        if impersonate_target is None:
+            from ..networking.impersonate import ImpersonateTarget
+            impersonate_target = ImpersonateTarget('chrome')
+            
+        # إضافة الهيدرز التي يستخدمها متصفح Opera لخداع يوتيوب
+        if 'http_headers' not in info_dict:
+            info_dict['http_headers'] = {}
+        info_dict['http_headers']['Referer'] = 'https://www.youtube.com/'
+        info_dict['http_headers']['Origin'] = 'https://www.youtube.com'
+    # --- تنتهي التعديلات المخصصة لترجمات يوتيوب ---
+
+    if impersonate_target is not None:
+        request_extensions['impersonate'] = impersonate_target
 
         class DownloadContext(dict):
             __getattr__ = dict.get
